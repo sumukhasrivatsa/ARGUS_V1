@@ -89,12 +89,12 @@ class PerceptionNode(Node):
         #   weight > 0     → GOAL (robot moves toward it)
         #   weight <= -600 → HARD obstacle (never relaxed)
         #   -600 < w < 0   → SOFT obstacle (planner can relax via ACM)
-        self.labels = ["bottle", "vase", "ball", "doll"]
+        self.labels = ["bottle", "vase", "sports ball","box"]
         self.label_weights = {
             "bottle":  -1000,
             "vase":     -400,
-            "ball":     -300,
-            "doll":     100,
+            "sports ball":  -200,
+            "box":     200,
         }
 
         # -- soft obstacle tracking (rebuilt every perception cycle) -----------
@@ -330,7 +330,7 @@ class PerceptionNode(Node):
 
             #first figure out if its a goal or an obstacle
             # Use label_weights directly — positive weight = goal, negative = obstacle
-            weight = self.label_weights.get(label_name, -500)
+            weight = self.label_weights.get(label_name)
 
             if weight > 0:
                 # means, the position of the goal changed
