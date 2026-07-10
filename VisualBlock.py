@@ -26,13 +26,13 @@ import rclpy.duration
 import rclpy.time
 import tf2_geometry_msgs
 from cv_bridge import CvBridge
-from geometry_msgs.msg import Point, Pose, PointStamped, Quaternion, TransformStamped
+from geometry_msgs.msg import Point, Pose, PointStamped, PoseStamped, Quaternion, TransformStamped
 from moveit_msgs.msg import CollisionObject
 from rclpy.node import Node
 from scipy.spatial.transform import Rotation
 from sensor_msgs.msg import Image
 from shape_msgs.msg import SolidPrimitive
-from std_msgs.msg import Header
+from std_msgs.msg import Header, String
 from tf2_ros import Buffer, StaticTransformBroadcaster, TransformListener
 from ultralytics import YOLOWorld
 
@@ -53,6 +53,11 @@ IMAGE_HEIGHT_PX    = 480
 TIMER_PERIOD_S     = 5.0    # seconds between perception runs
 CHANGE_THRESHOLD   = 0.05   # 5 cm — minimum move to count as a real change
 MIN_CONFIDENCE     = 0.25   # YOLO-World confidence threshold
+
+# Weight threshold — boundary between hard and soft obstacles.
+# weight <= this → hard obstacle (planner can NEVER relax it)
+# weight > this and < 0 → soft obstacle (planner CAN relax via ACM)
+HARD_THRESHOLD     = -600
 
 
 # -----------------------------------------------------------------------------
@@ -80,14 +85,25 @@ class PerceptionNode(Node):
 
         # -- labels and weights (LLM node will update these later) -------------
         # weights: negative = avoid, positive = goal, magnitude = priority
+        # This dict is the SINGLE source of truth:
+        #   weight > 0     → GOAL (robot moves toward it)
+        #   weight <= -600 → HARD obstacle (never relaxed)
+        #   -600 < w < 0   → SOFT obstacle (planner can relax via ACM)
         self.labels = ["bottle", "vase", "ball", "doll"]
-        self.goal = [0,0,0,1]
         self.label_weights = {
             "bottle":  -1000,
             "vase":     -400,
             "ball":     -300,
             "doll":     100,
         }
+
+        # -- soft obstacle tracking (rebuilt every perception cycle) -----------
+        # list of {"name": str, "weight": int} — sent to planner_client
+        self.soft_obstacles_this_cycle: list[dict] = []
+
+        # -- goal tracking ----------------------------------------------------
+        self.goal_label: str | None  = None
+        self.goal_xyz:   tuple | None = None
 
         # -- change detection state -------------------------------------------
         # keyed by label name → (world_x, world_y, world_z)
@@ -121,9 +137,22 @@ class PerceptionNode(Node):
             self.depth_callback, 10
         )
 
-        # -- publisher --------------------------------------------------------
+        # -- publishers -------------------------------------------------------
+        # ALL obstacles (hard + soft) go here. MoveIt2 treats all as hard by default.
         self.collision_pub = self.create_publisher(
             CollisionObject, '/collision_object', 10
+        )
+
+        # Goal pose — planner_client subscribes to this to know where to go
+        self.goal_pub = self.create_publisher(
+            PoseStamped, '/argus/goal_pose', 10
+        )
+
+        # Soft obstacle names — planner_client subscribes to know what it can
+        # relax via ACM if planning fails. Comma-separated, sorted by ascending
+        # |weight| (relax lowest priority first).
+        self.soft_obs_pub = self.create_publisher(
+            String, '/argus/soft_obstacles', 10
         )
 
         self.get_logger().warn(
@@ -141,6 +170,8 @@ class PerceptionNode(Node):
 
     # -- TF — broadcast static camera transform once at startup
     # ----------------------------------------------------------------------
+
+    """
     def _publish_table(self):
         co = CollisionObject()
         co.header = Header()
@@ -160,6 +191,8 @@ class PerceptionNode(Node):
         co.primitives = [box]
         co.primitive_poses = [pose]
         self.collision_pub.publish(co)
+
+    """
     def _broadcast_camera_transform(self):
         """
         Tells the TF system where camera_link is in world frame.
@@ -242,6 +275,9 @@ class PerceptionNode(Node):
             self.last_processed_time = self.last_frame_time
             return
 
+        # reset soft obstacle tracking for this cycle
+        self.soft_obstacles_this_cycle = []
+
         for box in results[0].boxes:
             label_idx  = int(box.cls[0])
             label_name = self.labels[label_idx]
@@ -277,14 +313,6 @@ class PerceptionNode(Node):
 
             # Snap bottom to table.
             TABLE_Z = 0.0
-            # cam_z = depth (Gazebo optical axis = +X)
-            # cam_x = lateral X
-            # cam_y = lateral Y
-            result = self._camera_to_world(cam_z, -cam_x, -cam_y)
-
-            if result is None:
-                continue
-            world_x, world_y, world_z = result
             world_z = TABLE_Z + size_z / 2.0
             self.get_logger().info(
                 f'{label_name} → world ({world_x:.3f}, {world_y:.3f}, {world_z:.3f})'
@@ -301,22 +329,91 @@ class PerceptionNode(Node):
             self.get_logger().info(f'Publishing CollisionObject for {label_name}')
 
             #first figure out if its a goal or an obstacle
-            if label_name in self.goal:
-                # Handle goal logic
-                pass
-            else:
-                # Handle obstacle logic
-                pass
+            # Use label_weights directly — positive weight = goal, negative = obstacle
+            weight = self.label_weights.get(label_name, -500)
 
-            self._publish_collision_object(
-                label_name, world_x, world_y, world_z,
-                size_x, size_y, size_z
-            )
+            if weight > 0:
+                # means, the position of the goal changed
+                self.goal_label = label_name
+                self.goal_xyz   = new_xyz
+                self._publish_goal(world_x, world_y, world_z, size_z)
+                self.get_logger().info(
+                    f'  ✓ GOAL: {label_name} at '
+                    f'({world_x:.3f}, {world_y:.3f}, {world_z:.3f})')
+            else:
+                # means,the position of the obstacle changed
+                self._publish_collision_object(
+                    label_name, world_x, world_y, world_z,
+                    size_x, size_y, size_z)
+
+                #not only this, we now need to tell, if, the collision is allowed, you can get a true/false from a function
+                is_soft = self._check_collision_allowance(label_name)
+
+                #now,only if the collision is allowed, add it to soft obstacles list for planner_client
+                if is_soft:
+                    # SOFT obstacle — planner_client can relax this via ACM
+                    self.soft_obstacles_this_cycle.append({
+                        'name': label_name,
+                        'weight': weight,
+                    })
+                    self.get_logger().info(
+                        f'  ~ SOFT obstacle: {label_name} (weight={weight})')
+                else:
+                    # HARD obstacle — planner_client can never relax this
+                    # No topic needed — it's already in the planning scene as a wall
+                    self.get_logger().info(
+                        f'  ✗ HARD obstacle: {label_name} (weight={weight})')
+
+        # publish soft obstacle list so planner_client knows what to relax
+        self._publish_soft_obstacles()
 
         self.last_processed_time = self.last_frame_time
 
     # -- Helpers ------------------------------------------------------------
     # ----------------------------------------------------------------------
+   
+
+    def _check_collision_allowance(self, class_name: str) -> bool:
+        #basically just checks the label_weights dict against the class label, if the weight <= -600, collision NOT allowed (hard), if > -600 & < 0, collision Allowed (soft)
+        weight = self.label_weights.get(class_name, -500)
+        return HARD_THRESHOLD < weight < 0
+
+    def _publish_goal(self, x: float, y: float, z: float, obj_height: float):
+        """
+        Publish goal pose to /argus/goal_pose.
+        Hovers 10cm above the object top. End effector points down.
+        planner_client.py subscribes to this and sends it to MoveIt2.
+        """
+        pose                     = PoseStamped()
+        pose.header.frame_id     = 'world'
+        pose.header.stamp        = self.get_clock().now().to_msg()
+        pose.pose.position.x     = x
+        pose.pose.position.y     = y
+        pose.pose.position.z     = z + obj_height / 2.0 + 0.10   # 10cm above top
+        # orientation: tool pointing straight down (90° rotation around Y)
+        pose.pose.orientation.x  = 0.0
+        pose.pose.orientation.y  = 0.707
+        pose.pose.orientation.z  = 0.0
+        pose.pose.orientation.w  = 0.707
+        self.goal_pub.publish(pose)
+
+    def _publish_soft_obstacles(self):
+        """
+        Publish soft obstacle names to /argus/soft_obstacles.
+        Sorted by ascending |weight| so planner relaxes lowest priority first.
+        planner_client.py subscribes to this.
+        """
+        sorted_soft = sorted(
+            self.soft_obstacles_this_cycle,
+            key=lambda obj: abs(obj['weight']))
+        names = ','.join(obj['name'] for obj in sorted_soft)
+
+        msg      = String()
+        msg.data = names
+        self.soft_obs_pub.publish(msg)
+
+        if names:
+            self.get_logger().info(f'  Soft obstacles (relax order): {names}')
 
     def _get_depth(self, cx_px: float, cy_px: float) -> float | None:
         """Return the depth value (metres) at a pixel. Returns None if invalid."""
