@@ -1,0 +1,175 @@
+<?xml version="1.0"?>
+<sdf version="1.9">
+  <world name="table_scene">
+    <physics name="1ms" type="ignored">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+    </physics>
+    <plugin filename="gz-sim-physics-system" name="gz::sim::systems::Physics"></plugin>
+    <plugin filename="gz-sim-user-commands-system" name="gz::sim::systems::UserCommands"></plugin>
+    <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster"></plugin>
+    <plugin filename="gz-sim-sensors-system" name="gz::sim::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+    <light type="directional" name="sun">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 10 0 0 0</pose>
+      <diffuse>0.8 0.8 0.8 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <direction>-0.5 0.1 -0.9</direction>
+    </light>
+
+    <model name="ground_plane">
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry><plane><normal>0 0 1</normal></plane></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><plane><normal>0 0 1</normal><size>10 10</size></plane></geometry>
+          <material><ambient>0.6 0.6 0.6 1</ambient><diffuse>0.6 0.6 0.6 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ===================== TABLE ===================== -->
+    <model name="table">
+      <static>true</static>
+      <pose>0 0 0 0 0 0</pose>
+      <link name="table_link">
+        <visual name="top_visual">
+          <pose>0 0 0.75 0 0 0</pose>
+          <geometry><box><size>1.2 0.8 0.05</size></box></geometry>
+          <material><ambient>0.55 0.35 0.2 1</ambient><diffuse>0.55 0.35 0.2 1</diffuse></material>
+        </visual>
+        <collision name="top_collision">
+          <pose>0 0 0.75 0 0 0</pose>
+          <geometry><box><size>1.2 0.8 0.05</size></box></geometry>
+        </collision>
+
+        <visual name="leg1_visual"><pose>0.55 0.35 0.375 0 0 0</pose>
+          <geometry><cylinder><radius>0.03</radius><length>0.75</length></cylinder></geometry>
+          <material><ambient>0.3 0.2 0.1 1</ambient><diffuse>0.3 0.2 0.1 1</diffuse></material></visual>
+        <collision name="leg1_collision"><pose>0.55 0.35 0.375 0 0 0</pose>
+          <geometry><cylinder><radius>0.03</radius><length>0.75</length></cylinder></geometry></collision>
+
+        <visual name="leg2_visual"><pose>-0.55 0.35 0.375 0 0 0</pose>
+          <geometry><cylinder><radius>0.03</radius><length>0.75</length></cylinder></geometry>
+          <material><ambient>0.3 0.2 0.1 1</ambient><diffuse>0.3 0.2 0.1 1</diffuse></material></visual>
+        <collision name="leg2_collision"><pose>-0.55 0.35 0.375 0 0 0</pose>
+          <geometry><cylinder><radius>0.03</radius><length>0.75</length></cylinder></geometry></collision>
+
+        <visual name="leg3_visual"><pose>0.55 -0.35 0.375 0 0 0</pose>
+          <geometry><cylinder><radius>0.03</radius><length>0.75</length></cylinder></geometry>
+          <material><ambient>0.3 0.2 0.1 1</ambient><diffuse>0.3 0.2 0.1 1</diffuse></material></visual>
+        <collision name="leg3_collision"><pose>0.55 -0.35 0.375 0 0 0</pose>
+          <geometry><cylinder><radius>0.03</radius><length>0.75</length></cylinder></geometry></collision>
+
+        <visual name="leg4_visual"><pose>-0.55 -0.35 0.375 0 0 0</pose>
+          <geometry><cylinder><radius>0.03</radius><length>0.75</length></cylinder></geometry>
+          <material><ambient>0.3 0.2 0.1 1</ambient><diffuse>0.3 0.2 0.1 1</diffuse></material></visual>
+        <collision name="leg4_collision"><pose>-0.55 -0.35 0.375 0 0 0</pose>
+          <geometry><cylinder><radius>0.03</radius><length>0.75</length></cylinder></geometry></collision>
+      </link>
+    </model>
+
+    <!-- ===================== WINE BOTTLE ===================== -->
+    <model name="wine_bottle">
+      <static>true</static>
+      <pose>0.3 -0.2 0 0 0 0</pose>
+      <link name="bottle_link">
+        <visual name="body_visual"><pose>0 0 0.9 0 0 0</pose>
+          <geometry><cylinder><radius>0.04</radius><length>0.25</length></cylinder></geometry>
+          <material><ambient>0.05 0.2 0.1 1</ambient><diffuse>0.05 0.2 0.1 1</diffuse></material></visual>
+        <collision name="body_collision"><pose>0 0 0.9 0 0 0</pose>
+          <geometry><cylinder><radius>0.04</radius><length>0.25</length></cylinder></geometry></collision>
+        <visual name="neck_visual"><pose>0 0 1.065 0 0 0</pose>
+          <geometry><cylinder><radius>0.012</radius><length>0.08</length></cylinder></geometry>
+          <material><ambient>0.05 0.2 0.1 1</ambient><diffuse>0.05 0.2 0.1 1</diffuse></material></visual>
+        <collision name="neck_collision"><pose>0 0 1.065 0 0 0</pose>
+          <geometry><cylinder><radius>0.012</radius><length>0.08</length></cylinder></geometry></collision>
+      </link>
+    </model>
+
+    <!-- ===================== VASE WITH FLOWERS ===================== -->
+    <model name="vase_with_flowers">
+      <static>true</static>
+      <pose>-0.3 0.15 0 0 0 0</pose>
+      <link name="vase_link">
+        <visual name="vase_visual"><pose>0 0 0.865 0 0 0</pose>
+          <geometry><cylinder><radius>0.06</radius><length>0.18</length></cylinder></geometry>
+          <material><ambient>0.85 0.85 0.8 1</ambient><diffuse>0.85 0.85 0.8 1</diffuse></material></visual>
+        <collision name="vase_collision"><pose>0 0 0.865 0 0 0</pose>
+          <geometry><cylinder><radius>0.06</radius><length>0.18</length></cylinder></geometry></collision>
+        <visual name="stem1_visual"><pose>0.02 0.01 1.065 0.08 0 0</pose>
+          <geometry><cylinder><radius>0.004</radius><length>0.22</length></cylinder></geometry>
+          <material><ambient>0.1 0.5 0.1 1</ambient><diffuse>0.1 0.5 0.1 1</diffuse></material></visual>
+        <visual name="head1_visual"><pose>0.04 0.02 1.18 0 0 0</pose>
+          <geometry><sphere><radius>0.025</radius></sphere></geometry>
+          <material><ambient>0.8 0.1 0.1 1</ambient><diffuse>0.8 0.1 0.1 1</diffuse></material></visual>
+        <visual name="stem2_visual"><pose>-0.025 0.015 1.07 -0.1 0.05 0</pose>
+          <geometry><cylinder><radius>0.004</radius><length>0.23</length></cylinder></geometry>
+          <material><ambient>0.1 0.5 0.1 1</ambient><diffuse>0.1 0.5 0.1 1</diffuse></material></visual>
+        <visual name="head2_visual"><pose>-0.05 0.03 1.19 0 0 0</pose>
+          <geometry><sphere><radius>0.025</radius></sphere></geometry>
+          <material><ambient>0.9 0.8 0.1 1</ambient><diffuse>0.9 0.8 0.1 1</diffuse></material></visual>
+        <visual name="stem3_visual"><pose>0.0 -0.03 1.06 0.05 -0.1 0</pose>
+          <geometry><cylinder><radius>0.004</radius><length>0.2</length></cylinder></geometry>
+          <material><ambient>0.1 0.5 0.1 1</ambient><diffuse>0.1 0.5 0.1 1</diffuse></material></visual>
+        <visual name="head3_visual"><pose>0.0 -0.06 1.17 0 0 0</pose>
+          <geometry><sphere><radius>0.022</radius></sphere></geometry>
+          <material><ambient>0.9 0.4 0.6 1</ambient><diffuse>0.9 0.4 0.6 1</diffuse></material></visual>
+      </link>
+    </model>
+
+    <!-- ===================== TEDDY BEAR ===================== -->
+    <!-- sitting at (0.1, 0.2) on the table — brown body + head + ears -->
+    
+
+    <!-- ===================== BALL ===================== -->
+    <!-- bright red ball — positive weight GOAL object -->
+    <!-- sits on table surface: base at z=0.775, center at z=0.825 -->
+    
+
+    <!-- ===================== CAMERA ===================== -->
+    <model name="overhead_rgbd_camera">
+      <static>true</static>
+      <pose>0 -1.4 1.6 0 0.5 1.5708</pose>
+      <link name="camera_link">
+        <sensor name="rgbd_camera_sensor" type="rgbd_camera">
+          <always_on>1</always_on>
+          <update_rate>10</update_rate>
+          <visualize>true</visualize>
+          <topic>rgbd_camera</topic>
+          <camera>
+            <horizontal_fov>1.25</horizontal_fov>
+            <image>
+              <width>640</width>
+              <height>480</height>
+              <format>R8G8B8</format>
+            </image>
+            <clip>
+              <near>0.05</near>
+              <far>10.0</far>
+            </clip>
+          </camera>
+        </sensor>
+      </link>
+    </model>
+
+  
+  <model name="mug">
+      <static>true</static><pose>-0.24 -0.02 0 0 0 0.6</pose>
+      <link name="link"><visual name="v"><pose>0 0 0.84 0 0 0</pose><geometry><cylinder><radius>0.045</radius><length>0.09</length></cylinder></geometry></visual></link>
+  </model>
+  <model name="bowl">
+      <static>true</static><pose>0.18 -0.12 0 0 0 -0.4</pose>
+      <link name="link"><visual name="v"><pose>0 0 0.82 0 0 0</pose><geometry><cylinder><radius>0.08</radius><length>0.04</length></cylinder></geometry></visual></link>
+  </model>
+  <model name="banana">
+      <static>true</static><pose>0.28 0.02 0 0 0 1.1</pose>
+      <link name="link"><visual name="v"><pose>0 0 0.82 0 0 0</pose><geometry><cylinder><radius>0.018</radius><length>0.16</length></cylinder></geometry></visual></link>
+  </model>
+
+</world>
+</sdf>
