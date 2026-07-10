@@ -105,6 +105,7 @@ class PlannerClient(Node):
         self.latest_goal = msg
         if not self.is_planning:
             self.plan_and_execute()
+        #now we have a new goal, hence we are planning and executing it
 
     # ─────────────────────────────────────────────────────────────────────────
     # Main planning loop with ACM relaxation
