@@ -73,7 +73,7 @@
       </link>
     </model>
 
-    <!-- ===================== WINE BOTTLE ===================== -->
+    <!-- ===================== WINE BOTTLE (primitive — already detected reliably) ===================== -->
     <model name="wine_bottle">
       <static>true</static>
       <pose>0.3 -0.2 0 0 0 0</pose>
@@ -91,7 +91,7 @@
       </link>
     </model>
 
-    <!-- ===================== VASE WITH FLOWERS ===================== -->
+    <!-- ===================== VASE WITH FLOWERS (primitive — already detected reliably) ===================== -->
     <model name="vase_with_flowers">
       <static>true</static>
       <pose>0.10 0.18 0.0 0 0 0</pose>
@@ -122,31 +122,25 @@
       </link>
     </model>
 
-    <!-- ===================== TEDDY BEAR ===================== -->
-    <!-- sitting at (0.1, 0.2) on the table — brown body + head + ears -->
-    <model name="cube">
+    <!-- ===================== COKE CAN (Fuel model — photorealistic) ===================== -->
+    <!-- YOLO-World detects this as "can" or "bottle" reliably                             -->
+    <!-- pose: x y z r p y — placed on table surface at z=0.775                           -->
+    <include>
+      <uri>https://fuel.gazebosim.org/1.0/OpenRobotics/models/Coke</uri>
+      <name>coke_can</name>
+      <pose>-0.18 0.02 0.775 0 0 0.5</pose>
       <static>true</static>
-      <pose>-0.18 0.02 0 0 0 0.5</pose>
-      <link name="cube_link">
-        <visual name="cube_visual"><pose>0 0 0.84 0 0 0</pose><geometry><box><size>0.08 0.08 0.08</size></box></geometry></visual>
-        <collision name="cube_collision"><pose>0 0 0.84 0 0 0</pose><geometry><box><size>0.08 0.08 0.08</size></box></geometry></collision>
-      </link>
-    </model>
+    </include>
 
-    <!-- ===================== BALL ===================== -->
-    <!-- bright red ball — positive weight GOAL object -->
-    <!-- sits on table surface: base at z=0.775, center at z=0.825 -->
-    <model name="ball">
+    <!-- ===================== CRICKET BALL (Fuel model — GOAL object) ===================== -->
+    <!-- Photorealistic red/white ball — YOLO-World detects as "sports ball" reliably      -->
+    <!-- This is the GOAL object (weight=200 in VisualBlock.py)                            -->
+    <include>
+      <uri>https://fuel.gazebosim.org/1.0/OpenRobotics/models/Cricket Ball</uri>
+      <name>cricket_ball</name>
+      <pose>0.22 0.20 0.775 0 0 0</pose>
       <static>true</static>
-      <pose>0.22 0.20 0 0 0 0</pose>
-      <link name="ball_link">
-        <visual name="ball_visual"><pose>0 0 0.825 0 0 0</pose>
-          <geometry><sphere><radius>0.05</radius></sphere></geometry>
-          <material><ambient>0.9 0.1 0.1 1</ambient><diffuse>0.9 0.1 0.1 1</diffuse></material></visual>
-        <collision name="ball_collision"><pose>0 0 0.825 0 0 0</pose>
-          <geometry><sphere><radius>0.05</radius></sphere></geometry></collision>
-      </link>
-    </model>
+    </include>
 
     <!-- ===================== CAMERA ===================== -->
     <model name="overhead_rgbd_camera">
