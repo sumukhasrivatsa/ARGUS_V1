@@ -171,7 +171,7 @@ class PlannerClient(Node):
         req.components.components = PlanningSceneComponents.ALLOWED_COLLISION_MATRIX
 
         future = self._get_scene_client.call_async(req)
-        rclpy.spin_until_future_complete(self, future)
+        self._wait_for_future(future)
 
         if future.result() is None:
             self.get_logger().error('GetPlanningScene service call failed.')
@@ -192,7 +192,7 @@ class PlannerClient(Node):
         req.scene = scene
 
         future = self._apply_scene_client.call_async(req)
-        rclpy.spin_until_future_complete(self, future)
+        self._wait_for_future(future)
 
         if future.result() is None or not future.result().success:
             self.get_logger().error('ApplyPlanningScene service call failed.')
@@ -229,6 +229,10 @@ class PlannerClient(Node):
         self._apply_acm(acm)
         self.get_logger().info(
             f'ACM: allowed collision between robot and [{object_name}]')
+        
+    def _wait_for_future(self, future):
+        while not future.done():
+            rclpy.spin_once(self, timeout_sec=0.1)
 
     def _disallow_collision(self, object_name: str):
         """
@@ -319,7 +323,7 @@ class PlannerClient(Node):
 
         # send and wait
         send_future = self._move_client.send_goal_async(goal_msg)
-        rclpy.spin_until_future_complete(self, send_future)
+        self._wait_for_future(send_future)
         goal_handle = send_future.result()
 
         if not goal_handle.accepted:
@@ -327,7 +331,7 @@ class PlannerClient(Node):
             return False
 
         result_future = goal_handle.get_result_async()
-        rclpy.spin_until_future_complete(self, result_future)
+        self._wait_for_future(result_future)
         result = result_future.result()
 
         # MoveItErrorCodes.SUCCESS = 1

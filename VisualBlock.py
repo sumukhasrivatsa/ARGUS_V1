@@ -50,7 +50,7 @@ CAMERA_FOV_RAD     = 1.20               # horizontal FOV — match SDF
 IMAGE_WIDTH_PX     = 640
 IMAGE_HEIGHT_PX    = 480
 
-TIMER_PERIOD_S     = 5.0    # seconds between perception runs
+TIMER_PERIOD_S     = 10   # seconds between perception runs
 CHANGE_THRESHOLD   = 0.05   # 5 cm — minimum move to count as a real change
 MIN_CONFIDENCE     = 0.25   # YOLO-World confidence threshold
 
@@ -89,12 +89,16 @@ class PerceptionNode(Node):
         #   weight > 0     → GOAL (robot moves toward it)
         #   weight <= -600 → HARD obstacle (never relaxed)
         #   -600 < w < 0   → SOFT obstacle (planner can relax via ACM)
-        self.labels = ["bottle", "vase", "sports ball","box"]
+        self.labels = ["bottle", "vase", "cricket ball", "sphere", "box", "can", "coke can", "package"]
         self.label_weights = {
             "bottle":  -1000,
             "vase":     -400,
-            "sports ball":  -200,
-            "box":     200,
+            "cricket ball":  -200,
+            "sphere":    -200,
+            "box":     -200,
+            "can":     200,
+            "coke can":   200,
+            "package":   -400
         }
 
         # -- soft obstacle tracking (rebuilt every perception cycle) -----------
@@ -104,10 +108,14 @@ class PerceptionNode(Node):
         # -- goal tracking ----------------------------------------------------
         self.goal_label: str | None  = None
         self.goal_xyz:   tuple | None = None
+        self.goal_size_z: float
 
         # -- change detection state -------------------------------------------
         # keyed by label name → (world_x, world_y, world_z)
         self.previous_xyz: dict[str, tuple] = {}
+        
+        # -- goal change identified -------------------------------------------
+        self.goal_changed = False
 
         # -- cv_bridge --------------------------------------------------------
         self.bridge = CvBridge()
@@ -277,6 +285,7 @@ class PerceptionNode(Node):
 
         # reset soft obstacle tracking for this cycle
         self.soft_obstacles_this_cycle = []
+        self.goal_changed = False
 
         for box in results[0].boxes:
             label_idx  = int(box.cls[0])
@@ -330,15 +339,16 @@ class PerceptionNode(Node):
 
             #first figure out if its a goal or an obstacle
             # Use label_weights directly — positive weight = goal, negative = obstacle
-            weight = self.label_weights.get(label_name)
+            weight = self.label_weights.get(label_name, -500)
 
             if weight > 0:
                 # means, the position of the goal changed
-                self.goal_label = label_name
-                self.goal_xyz   = new_xyz
-                self._publish_goal(world_x, world_y, world_z, size_z)
+                self.goal_label  = label_name
+                self.goal_xyz    = new_xyz
+                self.goal_size_z = size_z          # save size too, needed for publish
+                self.goal_changed     = True            # flag — publish AFTER loop exits
                 self.get_logger().info(
-                    f'  ✓ GOAL: {label_name} at '
+                    f'  ✓ GOAL saved: {label_name} at '
                     f'({world_x:.3f}, {world_y:.3f}, {world_z:.3f})')
             else:
                 # means,the position of the obstacle changed
@@ -366,7 +376,18 @@ class PerceptionNode(Node):
 
         # publish soft obstacle list so planner_client knows what to relax
         self._publish_soft_obstacles()
-
+        # NOW publish goal — all collision objects and soft obstacle list
+        # are already sent, so planner_client has the full scene before planning
+        if self.goal_changed:
+            self._publish_goal(
+                self.goal_xyz[0],
+                self.goal_xyz[1],
+                self.goal_xyz[2],
+                self.goal_size_z,
+            )
+            self.get_logger().info(
+                f'  ✓ GOAL published: {self.goal_label}')
+            goal_changed = False
         self.last_processed_time = self.last_frame_time
 
     # -- Helpers ------------------------------------------------------------
