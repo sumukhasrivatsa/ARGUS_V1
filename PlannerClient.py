@@ -17,6 +17,9 @@ The objects stay in the scene the whole time — the ACM just tells the
 collision checker to ignore specific pairs.
 """
 
+import queue           # ADDED — goal queue for planning thread
+import threading       # ADDED — planning thread + threading.Event for futures
+
 import rclpy
 from rclpy.node import Node
 from rclpy.action import ActionClient
@@ -87,12 +90,20 @@ class PlannerClient(Node):
         # ── state ────────────────────────────────────────────────────────────
         self.latest_goal: PoseStamped | None = None
         self.soft_obstacles: list[str]        = []
-        self.is_planning: bool                = False
+
+        # ADDED — goal queue: goal_callback drops goals here, planning thread picks them up
+        self._goal_queue: queue.Queue = queue.Queue()
+
+        # ADDED — planning thread: runs separately from the ROS executor
+        # so it can block freely without causing "Executor already spinning"
+        self._planning_thread = threading.Thread(
+            target=self._planning_loop, daemon=True)
+        self._planning_thread.start()
 
         self.get_logger().info('Planner client ready. Waiting for goal...')
 
     # ─────────────────────────────────────────────────────────────────────────
-    # Callbacks
+    # Callbacks — called by the ROS executor. Must return immediately.
     # ─────────────────────────────────────────────────────────────────────────
 
     def soft_obstacles_callback(self, msg: String):
@@ -103,9 +114,21 @@ class PlannerClient(Node):
 
     def goal_callback(self, msg: PoseStamped):
         self.latest_goal = msg
-        if not self.is_planning:
-            self.plan_and_execute()
+        self._goal_queue.put(msg)   # CHANGED — just drop in queue, return immediately
         #now we have a new goal, hence we are planning and executing it
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # ADDED — Planning loop runs in its own thread, can block freely
+    # ─────────────────────────────────────────────────────────────────────────
+
+    def _planning_loop(self):
+        while rclpy.ok():
+            try:
+                goal = self._goal_queue.get(timeout=1.0)
+            except queue.Empty:
+                continue
+            self.latest_goal = goal
+            self.plan_and_execute()
 
     # ─────────────────────────────────────────────────────────────────────────
     # Main planning loop with ACM relaxation
@@ -115,7 +138,6 @@ class PlannerClient(Node):
         if self.latest_goal is None:
             return
 
-        self.is_planning          = True
         relaxed_obstacles: list[str] = []
 
         self.get_logger().info(
@@ -128,7 +150,6 @@ class PlannerClient(Node):
 
         if success:
             self.get_logger().info('Plan succeeded on first attempt.')
-            self.is_planning = False
             return
 
         # ── Relaxation loop: allow collision with soft obstacles one by one ───
@@ -155,8 +176,6 @@ class PlannerClient(Node):
         for obstacle_name in relaxed_obstacles:
             self._disallow_collision(obstacle_name)
             self.get_logger().info(f'ACM restored for: {obstacle_name}')
-
-        self.is_planning = False
 
     # ─────────────────────────────────────────────────────────────────────────
     # ACM modification
@@ -229,10 +248,16 @@ class PlannerClient(Node):
         self._apply_acm(acm)
         self.get_logger().info(
             f'ACM: allowed collision between robot and [{object_name}]')
-        
+
     def _wait_for_future(self, future):
-        while not future.done():
-            rclpy.spin_once(self, timeout_sec=0.1)
+        # CHANGED — use threading.Event instead of rclpy.spin_once
+        # We are in the PLANNING THREAD (not the executor thread).
+        # The executor runs in the main thread and calls future done-callbacks
+        # when responses arrive. threading.Event lets us wait without touching
+        # the executor at all — no "Executor already spinning" crash possible.
+        event = threading.Event()
+        future.add_done_callback(lambda _: event.set())
+        event.wait()
 
     def _disallow_collision(self, object_name: str):
         """
@@ -347,7 +372,7 @@ def main(args=None):
     rclpy.init(args=args)
     node = PlannerClient()
     try:
-        rclpy.spin(node)
+        rclpy.spin(node)   # main thread — executor lives here, never blocked
     except KeyboardInterrupt:
         pass
     finally:

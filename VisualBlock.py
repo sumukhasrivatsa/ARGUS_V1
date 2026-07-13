@@ -52,7 +52,7 @@ IMAGE_HEIGHT_PX    = 480
 
 TIMER_PERIOD_S     = 10   # seconds between perception runs
 CHANGE_THRESHOLD   = 0.05   # 5 cm — minimum move to count as a real change
-MIN_CONFIDENCE     = 0.25   # YOLO-World confidence threshold
+MIN_CONFIDENCE     = 0.10   # YOLO-World confidence threshold
 
 # Weight threshold — boundary between hard and soft obstacles.
 # weight <= this → hard obstacle (planner can NEVER relax it)
@@ -89,16 +89,14 @@ class PerceptionNode(Node):
         #   weight > 0     → GOAL (robot moves toward it)
         #   weight <= -600 → HARD obstacle (never relaxed)
         #   -600 < w < 0   → SOFT obstacle (planner can relax via ACM)
-        self.labels = ["bottle", "vase", "cricket ball", "sphere", "box", "can", "coke can", "package"]
+        self.labels = ["bottle", "vase", "shoe", "cup", "red ball", "boot"]
         self.label_weights = {
-            "bottle":  -1000,
-            "vase":     -400,
-            "cricket ball":  -200,
-            "sphere":    -200,
-            "box":     -200,
-            "can":     200,
-            "coke can":   200,
-            "package":   -400
+            "bottle":       -1000,   # HARD
+            "vase":          -400,   # SOFT
+            "shoe":          -300,   # SOFT
+            "cup":           -200,   # SOFT
+            "red ball":      200,   # GOAL ✓
+            "boot":          -700,   # HARD
         }
 
         # -- soft obstacle tracking (rebuilt every perception cycle) -----------
@@ -131,7 +129,7 @@ class PerceptionNode(Node):
 
         # -- YOLO-World ------------------------------------------------------
         self.get_logger().info('Loading YOLO-World...')
-        self.model = YOLOWorld("yolov8s-worldv2.pt")
+        self.model = YOLOWorld("yolov8l-worldv2.pt")  # was yolov8s
         self.model.set_classes(self.labels)
         self.get_logger().info(f'YOLO-World ready. Watching: {self.labels}')
 
