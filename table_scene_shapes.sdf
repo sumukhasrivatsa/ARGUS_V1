@@ -5,20 +5,46 @@
       <max_step_size>0.001</max_step_size>
       <real_time_factor>1.0</real_time_factor>
     </physics>
-    <plugin filename="gz-sim-physics-system" name="gz::sim::systems::Physics"></plugin>
-    <plugin filename="gz-sim-user-commands-system" name="gz::sim::systems::UserCommands"></plugin>
+    <plugin filename="gz-sim-physics-system"           name="gz::sim::systems::Physics"></plugin>
+    <plugin filename="gz-sim-user-commands-system"     name="gz::sim::systems::UserCommands"></plugin>
     <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster"></plugin>
-    <plugin filename="gz-sim-sensors-system" name="gz::sim::systems::Sensors">
+    <plugin filename="gz-sim-sensors-system"           name="gz::sim::systems::Sensors">
       <render_engine>ogre2</render_engine>
     </plugin>
+
+    <!-- main directional — bright, slightly warm -->
     <light type="directional" name="sun">
       <cast_shadows>true</cast_shadows>
       <pose>0 0 10 0 0 0</pose>
-      <diffuse>0.8 0.8 0.8 1</diffuse>
-      <specular>0.2 0.2 0.2 1</specular>
-      <direction>-0.5 0.1 -0.9</direction>
+      <diffuse>1.0 0.98 0.95 1</diffuse>
+      <specular>0.4 0.4 0.4 1</specular>
+      <direction>-0.3 0.1 -0.9</direction>
     </light>
 
+    <!-- strong fill from camera side — lights all front faces -->
+    <light type="directional" name="fill_camera">
+      <cast_shadows>false</cast_shadows>
+      <pose>0 -5 2 0 0 0</pose>
+      <diffuse>0.8 0.8 0.8 1</diffuse>
+      <specular>0.1 0.1 0.1 1</specular>
+      <direction>0 0.85 -0.15</direction>
+    </light>
+
+    <!-- point light above the table — eliminates dark spots on objects -->
+    <light type="point" name="table_lamp">
+      <cast_shadows>false</cast_shadows>
+      <pose>0 0.15 1.5 0 0 0</pose>
+      <diffuse>1.0 1.0 1.0 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <attenuation>
+        <range>3</range>
+        <constant>0.3</constant>
+        <linear>0.1</linear>
+        <quadratic>0.0</quadratic>
+      </attenuation>
+    </light>
+
+    <!-- ── GROUND ──────────────────────────────────────────────── -->
     <model name="ground_plane">
       <static>true</static>
       <link name="link">
@@ -27,122 +53,148 @@
         </collision>
         <visual name="visual">
           <geometry><plane><normal>0 0 1</normal><size>10 10</size></plane></geometry>
-          <material><ambient>0.6 0.6 0.6 1</ambient><diffuse>0.6 0.6 0.6 1</diffuse></material>
+          <material><ambient>0.7 0.7 0.7 1</ambient><diffuse>0.7 0.7 0.7 1</diffuse></material>
         </visual>
       </link>
     </model>
 
-    <!-- ===================== TABLE ===================== -->
+    <!-- ── TABLE ───────────────────────────────────────────────── -->
     <model name="table">
       <static>true</static>
       <pose>0 0 0 0 0 0</pose>
       <link name="table_link">
-        <visual name="top_visual">
-          <pose>0 0 0.75 0 0 0</pose>
-          <geometry><box><size>1.2 0.8 0.05</size></box></geometry>
+        <visual name="top"><pose>0 0 0.75 0 0 0</pose>
+          <geometry><box><size>1.4 0.9 0.05</size></box></geometry>
           <material><ambient>0.55 0.35 0.2 1</ambient><diffuse>0.55 0.35 0.2 1</diffuse></material>
         </visual>
-        <collision name="top_collision">
-          <pose>0 0 0.75 0 0 0</pose>
-          <geometry><box><size>1.2 0.8 0.05</size></box></geometry>
+        <collision name="top_col"><pose>0 0 0.75 0 0 0</pose>
+          <geometry><box><size>1.4 0.9 0.05</size></box></geometry>
         </collision>
-
-        <visual name="leg1_visual"><pose>0.55 0.35 0.375 0 0 0</pose>
+        <visual name="leg1"><pose> 0.62  0.40 0.375 0 0 0</pose>
           <geometry><cylinder><radius>0.03</radius><length>0.75</length></cylinder></geometry>
           <material><ambient>0.3 0.2 0.1 1</ambient><diffuse>0.3 0.2 0.1 1</diffuse></material></visual>
-        <collision name="leg1_collision"><pose>0.55 0.35 0.375 0 0 0</pose>
+        <collision name="leg1c"><pose> 0.62  0.40 0.375 0 0 0</pose>
           <geometry><cylinder><radius>0.03</radius><length>0.75</length></cylinder></geometry></collision>
-
-        <visual name="leg2_visual"><pose>-0.55 0.35 0.375 0 0 0</pose>
+        <visual name="leg2"><pose>-0.62  0.40 0.375 0 0 0</pose>
           <geometry><cylinder><radius>0.03</radius><length>0.75</length></cylinder></geometry>
           <material><ambient>0.3 0.2 0.1 1</ambient><diffuse>0.3 0.2 0.1 1</diffuse></material></visual>
-        <collision name="leg2_collision"><pose>-0.55 0.35 0.375 0 0 0</pose>
+        <collision name="leg2c"><pose>-0.62  0.40 0.375 0 0 0</pose>
           <geometry><cylinder><radius>0.03</radius><length>0.75</length></cylinder></geometry></collision>
-
-        <visual name="leg3_visual"><pose>0.55 -0.35 0.375 0 0 0</pose>
+        <visual name="leg3"><pose> 0.62 -0.40 0.375 0 0 0</pose>
           <geometry><cylinder><radius>0.03</radius><length>0.75</length></cylinder></geometry>
           <material><ambient>0.3 0.2 0.1 1</ambient><diffuse>0.3 0.2 0.1 1</diffuse></material></visual>
-        <collision name="leg3_collision"><pose>0.55 -0.35 0.375 0 0 0</pose>
+        <collision name="leg3c"><pose> 0.62 -0.40 0.375 0 0 0</pose>
           <geometry><cylinder><radius>0.03</radius><length>0.75</length></cylinder></geometry></collision>
-
-        <visual name="leg4_visual"><pose>-0.55 -0.35 0.375 0 0 0</pose>
+        <visual name="leg4"><pose>-0.62 -0.40 0.375 0 0 0</pose>
           <geometry><cylinder><radius>0.03</radius><length>0.75</length></cylinder></geometry>
           <material><ambient>0.3 0.2 0.1 1</ambient><diffuse>0.3 0.2 0.1 1</diffuse></material></visual>
-        <collision name="leg4_collision"><pose>-0.55 -0.35 0.375 0 0 0</pose>
+        <collision name="leg4c"><pose>-0.62 -0.40 0.375 0 0 0</pose>
           <geometry><cylinder><radius>0.03</radius><length>0.75</length></cylinder></geometry></collision>
       </link>
     </model>
 
-    <!-- ===================== WINE BOTTLE (primitive — already detected reliably) ===================== -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <!--  OBJECTS                                                   -->
+    <!--  VisualBlock.py:                                           -->
+    <!--  labels = ["bottle","vase","clock","cup","sports ball"]    -->
+    <!--  weights = {                                               -->
+    <!--    "bottle":      -1000,   HARD                           -->
+    <!--    "vase":         -400,   SOFT                           -->
+    <!--    "clock":        -300,   SOFT                           -->
+    <!--    "cup":          -200,   SOFT                           -->
+    <!--    "sports ball":  +200,   GOAL ✓                         -->
+    <!--  }                                                         -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+
+    <!-- 1. WINE BOTTLE — far left -->
     <model name="wine_bottle">
       <static>true</static>
-      <pose>0.3 -0.2 0 0 0 0</pose>
-      <link name="bottle_link">
-        <visual name="body_visual"><pose>0 0 0.9 0 0 0</pose>
-          <geometry><cylinder><radius>0.04</radius><length>0.25</length></cylinder></geometry>
-          <material><ambient>0.05 0.2 0.1 1</ambient><diffuse>0.05 0.2 0.1 1</diffuse></material></visual>
-        <collision name="body_collision"><pose>0 0 0.9 0 0 0</pose>
-          <geometry><cylinder><radius>0.04</radius><length>0.25</length></cylinder></geometry></collision>
-        <visual name="neck_visual"><pose>0 0 1.065 0 0 0</pose>
-          <geometry><cylinder><radius>0.012</radius><length>0.08</length></cylinder></geometry>
-          <material><ambient>0.05 0.2 0.1 1</ambient><diffuse>0.05 0.2 0.1 1</diffuse></material></visual>
-        <collision name="neck_collision"><pose>0 0 1.065 0 0 0</pose>
-          <geometry><cylinder><radius>0.012</radius><length>0.08</length></cylinder></geometry></collision>
+      <pose>-0.38 0.18 0 0 0 0</pose>
+      <link name="link">
+        <visual name="body"><pose>0 0 0.905 0 0 0</pose>
+          <geometry><cylinder><radius>0.038</radius><length>0.26</length></cylinder></geometry>
+          <material><ambient>0.04 0.22 0.08 1</ambient><diffuse>0.04 0.22 0.08 1</diffuse></material></visual>
+        <collision name="body_c"><pose>0 0 0.905 0 0 0</pose>
+          <geometry><cylinder><radius>0.038</radius><length>0.26</length></cylinder></geometry></collision>
+        <visual name="label"><pose>0 0 0.905 0 0 0</pose>
+          <geometry><cylinder><radius>0.041</radius><length>0.09</length></cylinder></geometry>
+          <material><ambient>0.96 0.94 0.86 1</ambient><diffuse>0.96 0.94 0.86 1</diffuse></material></visual>
+        <visual name="neck"><pose>0 0 1.065 0 0 0</pose>
+          <geometry><cylinder><radius>0.013</radius><length>0.08</length></cylinder></geometry>
+          <material><ambient>0.04 0.22 0.08 1</ambient><diffuse>0.04 0.22 0.08 1</diffuse></material></visual>
+        <collision name="neck_c"><pose>0 0 1.065 0 0 0</pose>
+          <geometry><cylinder><radius>0.013</radius><length>0.08</length></cylinder></geometry></collision>
       </link>
     </model>
 
-    <!-- ===================== VASE WITH FLOWERS (primitive — already detected reliably) ===================== -->
+    <!-- 2. VASE WITH FLOWERS — left centre -->
     <model name="vase_with_flowers">
       <static>true</static>
-      <pose>0.10 0.18 0.0 0 0 0</pose>
-      <link name="vase_link">
-        <visual name="vase_visual"><pose>0 0 0.865 0 0 0</pose>
-          <geometry><cylinder><radius>0.06</radius><length>0.18</length></cylinder></geometry>
-          <material><ambient>0.85 0.85 0.8 1</ambient><diffuse>0.85 0.85 0.8 1</diffuse></material></visual>
-        <collision name="vase_collision"><pose>0 0 0.865 0 0 0</pose>
-          <geometry><cylinder><radius>0.06</radius><length>0.18</length></cylinder></geometry></collision>
-        <visual name="stem1_visual"><pose>0.02 0.01 1.065 0.08 0 0</pose>
-          <geometry><cylinder><radius>0.004</radius><length>0.22</length></cylinder></geometry>
-          <material><ambient>0.1 0.5 0.1 1</ambient><diffuse>0.1 0.5 0.1 1</diffuse></material></visual>
-        <visual name="head1_visual"><pose>0.04 0.02 1.18 0 0 0</pose>
-          <geometry><sphere><radius>0.025</radius></sphere></geometry>
-          <material><ambient>0.8 0.1 0.1 1</ambient><diffuse>0.8 0.1 0.1 1</diffuse></material></visual>
-        <visual name="stem2_visual"><pose>-0.025 0.015 1.07 -0.1 0.05 0</pose>
-          <geometry><cylinder><radius>0.004</radius><length>0.23</length></cylinder></geometry>
-          <material><ambient>0.1 0.5 0.1 1</ambient><diffuse>0.1 0.5 0.1 1</diffuse></material></visual>
-        <visual name="head2_visual"><pose>-0.05 0.03 1.19 0 0 0</pose>
-          <geometry><sphere><radius>0.025</radius></sphere></geometry>
-          <material><ambient>0.9 0.8 0.1 1</ambient><diffuse>0.9 0.8 0.1 1</diffuse></material></visual>
-        <visual name="stem3_visual"><pose>0.0 -0.03 1.06 0.05 -0.1 0</pose>
-          <geometry><cylinder><radius>0.004</radius><length>0.2</length></cylinder></geometry>
-          <material><ambient>0.1 0.5 0.1 1</ambient><diffuse>0.1 0.5 0.1 1</diffuse></material></visual>
-        <visual name="head3_visual"><pose>0.0 -0.06 1.17 0 0 0</pose>
-          <geometry><sphere><radius>0.022</radius></sphere></geometry>
-          <material><ambient>0.9 0.4 0.6 1</ambient><diffuse>0.9 0.4 0.6 1</diffuse></material></visual>
+      <pose>-0.14 0.26 0 0 0 0</pose>
+      <link name="link">
+        <visual name="vase"><pose>0 0 0.864 0 0 0</pose>
+          <geometry><cylinder><radius>0.058</radius><length>0.178</length></cylinder></geometry>
+          <material><ambient>0.95 0.95 0.92 1</ambient><diffuse>0.95 0.95 0.92 1</diffuse></material></visual>
+        <collision name="vase_c"><pose>0 0 0.864 0 0 0</pose>
+          <geometry><cylinder><radius>0.058</radius><length>0.178</length></cylinder></geometry></collision>
+        <visual name="s1"><pose>0.02 0.01 1.065 0.08 0 0</pose>
+          <geometry><cylinder><radius>0.005</radius><length>0.22</length></cylinder></geometry>
+          <material><ambient>0.1 0.7 0.1 1</ambient><diffuse>0.1 0.7 0.1 1</diffuse></material></visual>
+        <visual name="s2"><pose>-0.025 0.015 1.07 -0.1 0.05 0</pose>
+          <geometry><cylinder><radius>0.005</radius><length>0.23</length></cylinder></geometry>
+          <material><ambient>0.1 0.7 0.1 1</ambient><diffuse>0.1 0.7 0.1 1</diffuse></material></visual>
+        <visual name="s3"><pose>0.0 -0.03 1.06 0.05 -0.1 0</pose>
+          <geometry><cylinder><radius>0.005</radius><length>0.20</length></cylinder></geometry>
+          <material><ambient>0.1 0.7 0.1 1</ambient><diffuse>0.1 0.7 0.1 1</diffuse></material></visual>
+        <visual name="h1"><pose>0.04 0.02 1.185 0 0 0</pose>
+          <geometry><sphere><radius>0.030</radius></sphere></geometry>
+          <material><ambient>0.95 0.08 0.08 1</ambient><diffuse>0.95 0.08 0.08 1</diffuse></material></visual>
+        <visual name="h2"><pose>-0.05 0.03 1.195 0 0 0</pose>
+          <geometry><sphere><radius>0.030</radius></sphere></geometry>
+          <material><ambient>0.95 0.85 0.0 1</ambient><diffuse>0.95 0.85 0.0 1</diffuse></material></visual>
+        <visual name="h3"><pose>0.0 -0.06 1.175 0 0 0</pose>
+          <geometry><sphere><radius>0.026</radius></sphere></geometry>
+          <material><ambient>0.95 0.35 0.75 1</ambient><diffuse>0.95 0.35 0.75 1</diffuse></material></visual>
       </link>
     </model>
 
-    <!-- ===================== COKE CAN (Fuel model — photorealistic) ===================== -->
-    <!-- YOLO-World detects this as "can" or "bottle" reliably                             -->
-    <!-- pose: x y z r p y — placed on table surface at z=0.775                           -->
+    <!--  boot — replaces clock, centre table -->
+    <!-- YOLO: "boot"   weight: -300  SOFT -->
     <include>
-      <uri>https://fuel.gazebosim.org/1.0/OpenRobotics/models/Coke</uri>
-      <name>coke_can</name>
-      <pose>-0.18 0.02 0.775 0 0 0.5</pose>
+      <uri>https://fuel.gazebosim.org/1.0/GoogleResearch/models/W_Lou_z0dkC78niiZ</uri>
+      <name>boot_shoe</name>
+      <pose>0.30 0.0 0.775 0 0 0</pose>
+      <static>true</static>
+    </include>
+    
+    <!--suitcase — replaces coke can, centre-right -->
+    <!-- YOLO: "mug"   weight: -200  SOFT -->
+    <include>
+      <uri>https://fuel.gazebosim.org/1.0/GoogleResearch/models/Threshold_Porcelain_Coffee_Mug_All_Over_Bead_White</uri>
+      <name>mug</name>
+      <pose>0.10 0.22 0.850 0 0 0</pose>
       <static>true</static>
     </include>
 
-    <!-- ===================== CRICKET BALL (Fuel model — GOAL object) ===================== -->
-    <!-- Photorealistic red/white ball — YOLO-World detects as "sports ball" reliably      -->
-    <!-- This is the GOAL object (weight=200 in VisualBlock.py)                            -->
-    <include>
-      <uri>https://fuel.gazebosim.org/1.0/OpenRobotics/models/Cricket Ball</uri>
-      <name>cricket_ball</name>
-      <pose>0.22 0.20 0.775 0 0 0</pose>
-      <static>true</static>
-    </include>
 
-    <!-- ===================== CAMERA ===================== -->
+    <!-- 5. RED BALL — far right, GOAL                              -->
+    <!--    Large primitive sphere r=0.08m — impossible to miss     -->
+    <!--    YOLO: "sports ball"   weight: +200  GOAL ✓             -->
+    <model name="red_ball">
+      <static>true</static>
+      <pose>0.55 0.28 0 0 0 0</pose>
+      <link name="link">
+        <visual name="v"><pose>0 0 0.855 0 0 0</pose>
+          <geometry><sphere><radius>0.08</radius></sphere></geometry>
+          <material><ambient>0.95 0.05 0.05 1</ambient><diffuse>0.95 0.05 0.05 1</diffuse></material>
+        </visual>
+        <collision name="c"><pose>0 0 0.855 0 0 0</pose>
+          <geometry><sphere><radius>0.08</radius></sphere></geometry>
+        </collision>
+      </link>
+    </model>
+
+    <!-- ── CAMERA ─────────────────────────────────────────────── -->
     <model name="overhead_rgbd_camera">
       <static>true</static>
       <pose>0 -1.4 1.6 0 0.5 1.5708</pose>
@@ -159,10 +211,7 @@
               <height>480</height>
               <format>R8G8B8</format>
             </image>
-            <clip>
-              <near>0.05</near>
-              <far>10.0</far>
-            </clip>
+            <clip><near>0.05</near><far>10.0</far></clip>
           </camera>
         </sensor>
       </link>
